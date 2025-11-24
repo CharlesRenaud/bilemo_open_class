@@ -43,6 +43,7 @@ security:
             lazy: true
     
     access_control:
+        - { path: ^/api/status$, roles: PUBLIC_ACCESS }
         - { path: ^/api/admin/login$, roles: PUBLIC_ACCESS }
         - { path: ^/api/client/login$, roles: PUBLIC_ACCESS }
         - { path: ^/api/, roles: [ROLE_ADMIN, ROLE_CLIENT] }

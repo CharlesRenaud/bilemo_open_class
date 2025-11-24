@@ -12,6 +12,8 @@ services:
 
     App\:
         resource: '../src/'
+        exclude:
+            - '../src/Security/ApiUser.php'
 
     # Exclude ApiUser from autowiring (it's instantiated manually in UserProvider)
     App\Security\ApiUser:

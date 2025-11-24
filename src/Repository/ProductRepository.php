@@ -16,28 +16,56 @@ class ProductRepository extends ServiceEntityRepository
         parent::__construct($registry, Product::class);
     }
 
-//    /**
-//     * @return Product[] Returns an array of Product objects
-//     */
-//    public function findByExampleField($value): array
-//    {
-//        return $this->createQueryBuilder('p')
-//            ->andWhere('p.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->orderBy('p.id', 'ASC')
-//            ->setMaxResults(10)
-//            ->getQuery()
-//            ->getResult()
-//        ;
-//    }
+    /**
+     * Trouve les produits de manière paginée avec tri
+     * 
+     * @param int $offset Le décalage (offset) pour la pagination
+     * @param int $limit Le nombre de résultats à retourner
+     * @param string $sort Le champ sur lequel trier
+     * @param string $order L'ordre de tri ('ASC' ou 'DESC')
+     * 
+     * @return Product[] Les produits correspondants
+     */
+    public function findPaginated(int $offset, int $limit, string $sort = 'id', string $order = 'ASC'): array
+    {
+        return $this->createQueryBuilder('p')
+            ->orderBy('p.' . $sort, $order)
+            ->setFirstResult($offset)
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult()
+        ;
+    }
 
-//    public function findOneBySomeField($value): ?Product
-//    {
-//        return $this->createQueryBuilder('p')
-//            ->andWhere('p.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->getQuery()
-//            ->getOneOrNullResult()
-//        ;
-//    }
+    /**
+     * Récupère tous les produits disponibles
+     * 
+     * @return Product[] Les produits disponibles
+     */
+    public function findAvailable(): array
+    {
+        return $this->createQueryBuilder('p')
+            ->andWhere('p.availability = :available')
+            ->setParameter('available', true)
+            ->orderBy('p.name', 'ASC')
+            ->getQuery()
+            ->getResult()
+        ;
+    }
+
+    /**
+     * Recherche les produits par marque
+     * 
+     * @return Product[] Les produits correspondant à la marque
+     */
+    public function findByBrand(string $brand): array
+    {
+        return $this->createQueryBuilder('p')
+            ->andWhere('p.brand = :brand')
+            ->setParameter('brand', $brand)
+            ->orderBy('p.name', 'ASC')
+            ->getQuery()
+            ->getResult()
+        ;
+    }
 }

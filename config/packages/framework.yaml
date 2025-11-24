@@ -8,8 +8,33 @@ framework:
     #esi: true
     #fragments: true
 
+    # Configuration du système de cache
+    cache:
+        app: cache.adapter.filesystem
+        pools:
+            # Cache pour les entités métier (produits, utilisateurs, etc.)
+            cache.api:
+                adapter: cache.adapter.filesystem
+                default_lifetime: 3600  # 1 heure par défaut
+
 when@test:
     framework:
         test: true
         session:
             storage_factory_id: session.storage.factory.mock_file
+        
+        cache:
+            app: cache.adapter.array
+            pools:
+                cache.api:
+                    adapter: cache.adapter.array
+
+when@prod:
+    framework:
+        cache:
+            app: cache.adapter.redis
+            pools:
+                cache.api:
+                    adapter: cache.adapter.redis
+                    dsn: '%env(REDIS_URL)%/2'
+                    default_lifetime: 3600

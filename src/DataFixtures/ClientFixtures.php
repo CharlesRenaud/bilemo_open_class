@@ -14,7 +14,25 @@ class ClientFixtures extends Fixture
     {
         $faker = Factory::create('fr_FR');
 
-        // Créer 10 clients
+        // Créer un client de test avec email connu
+        $testClient = new Client();
+        $testClient->setName('Test Client Company');
+        $testClient->setEmail('client@bilemo.com');
+        $testClient->setPasswordHash(password_hash('client123', PASSWORD_BCRYPT));
+
+        // Ajouter quelques utilisateurs au client de test
+        for ($j = 0; $j < 3; $j++) {
+            $user = new User();
+            $user->setFirstname($faker->firstName());
+            $user->setLastname($faker->lastName());
+            $user->setEmail($faker->unique()->safeEmail());
+            $user->setPhone($faker->phoneNumber());
+            $user->setClient($testClient);
+            $manager->persist($user);
+        }
+        $manager->persist($testClient);
+
+        // Créer 10 clients supplémentaires
         for ($i = 0; $i < 10; $i++) {
             $client = new Client();
             $client->setName($faker->company());

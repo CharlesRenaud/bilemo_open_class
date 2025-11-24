@@ -96,6 +96,9 @@ lexik_jwt_authentication:
 - Rôles : `ROLE_ADMIN`, `ROLE_CLIENT`
 
 ## 🧪 Tests rapides
+```bash
+curl http://localhost:8000/api/status
+```
 
 ```bash
 curl -H "Authorization: Bearer {token}" http://localhost:8000/api/products

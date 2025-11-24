@@ -61,7 +61,7 @@ class ApiExceptionListener
             404 => [
                 'api_root' => $this->hateoas->createLink('root', $this->hateoas->getRootUrl(), 'GET', 'Découvrir l\'API'),
                 'products' => $this->hateoas->createLink('products', $this->hateoas->getProductsListUrl(), 'GET', 'Lister les produits'),
-                'client_profile' => $this->hateoas->createClientLinks(0, 'Client')['self'], // template
+                'client_profile' => $this->hateoas->createClientLinks(0, 'Client')['self'],
                 'client_users' => $this->hateoas->createClientLinks(0, 'Client')['users'],
             ],
             403 => [

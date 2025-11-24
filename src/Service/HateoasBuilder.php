@@ -12,7 +12,7 @@ class HateoasBuilder
     }
 
     /**
-     * Crée un lien HATEOAS avec relation sémantique
+     * Crée un lien HATEOAS générique
      */
     public function createLink(
         string $rel,
@@ -34,7 +34,20 @@ class HateoasBuilder
     }
 
     /**
-     * Génère tous les liens HATEOAS pour un client
+     * Crée un lien HATEOAS pour une ressource (produit, etc.)
+     */
+    public function createResourceLink(
+        string $routeName,
+        mixed $id,
+        string $method = 'GET',
+        ?string $title = null
+    ): array {
+        $href = $this->urlGenerator->generate($routeName, ['id' => $id]);
+        return $this->createLink('self', $href, $method, $title);
+    }
+
+    /**
+     * Génère les liens HATEOAS pour un client
      */
     public function createClientLinks(int $clientId, string $clientName): array
     {
@@ -55,7 +68,7 @@ class HateoasBuilder
     }
 
     /**
-     * Génère tous les liens HATEOAS pour la liste des utilisateurs
+     * Génère les liens HATEOAS pour la liste des utilisateurs
      */
     public function createUsersListLinks(): array
     {
@@ -82,7 +95,7 @@ class HateoasBuilder
     }
 
     /**
-     * Génère tous les liens HATEOAS pour un utilisateur individuel
+     * Génère les liens HATEOAS pour un utilisateur individuel
      */
     public function createUserLinks(int $userId, string $userName, bool $includeList = true): array
     {
@@ -145,8 +158,9 @@ class HateoasBuilder
         return $links;
     }
 
-    // ... autres méthodes existantes (pagination, etc.)
-
+    /**
+     * Génère les liens de pagination
+     */
     public function createPaginationLinks(
         int $page,
         int $limit,
@@ -171,9 +185,7 @@ class HateoasBuilder
                 'GET',
                 'Première page'
             );
-        }
 
-        if ($page > 1) {
             $links['prev'] = $this->createLink(
                 'prev',
                 $this->urlGenerator->generate($routeName, array_merge($params, ['page' => $page - 1, 'limit' => $limit])),
@@ -189,9 +201,7 @@ class HateoasBuilder
                 'GET',
                 'Page suivante'
             );
-        }
 
-        if ($page < $maxPages) {
             $links['last'] = $this->createLink(
                 'last',
                 $this->urlGenerator->generate($routeName, array_merge($params, ['page' => $maxPages, 'limit' => $limit])),
@@ -203,6 +213,9 @@ class HateoasBuilder
         return $links;
     }
 
+    /**
+     * Ajoute les liens HATEOAS à une ressource
+     */
     public function addLinks(array $resource, array $links): array
     {
         if (!empty($links)) {
@@ -211,4 +224,33 @@ class HateoasBuilder
 
         return $resource;
     }
+
+
+
+    public function getRootUrl(): string
+    {
+        return $this->urlGenerator->generate('api_root');
+    }
+
+    public function getStatusUrl(): string
+    {
+        return $this->urlGenerator->generate('api_status');
+    }
+
+    public function getAdminLoginUrl(): string
+    {
+        return $this->urlGenerator->generate('api_admin_login');
+    }
+
+    public function getClientLoginUrl(): string
+    {
+        return $this->urlGenerator->generate('api_client_login');
+    }
+
+    public function getProductsListUrl(): string
+    {
+        return $this->urlGenerator->generate('api_products_list');
+    }
+
+    
 }

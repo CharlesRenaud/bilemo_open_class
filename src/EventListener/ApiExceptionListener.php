@@ -3,27 +3,19 @@
 namespace App\EventListener;
 
 use App\Api\Response\ApiResponse;
-use Symfony\Component\HttpFoundation\JsonResponse;
+use App\Service\HateoasBuilder;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
-use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 /**
  * Event Listener pour gérer les exceptions et les convertir en réponses JSON
- * avec support HATEOAS (liens utiles).
- * 
- * Transforme les exceptions en réponses API cohérentes avec des liens
- * qui guident le client vers les prochaines actions possibles.
+ * avec support HATEOAS.
  */
 class ApiExceptionListener
 {
     public function __construct(
-        private UrlGeneratorInterface $urlGenerator,
-    ) {
-        // Configurer le générateur d'URLs pour ApiResponse
-        ApiResponse::setUrlGenerator($urlGenerator);
-    }
+        private HateoasBuilder $hateoas
+    ) {}
 
     public function onKernelException(ExceptionEvent $event): void
     {
@@ -35,13 +27,10 @@ class ApiExceptionListener
             return;
         }
 
-        // Créer une réponse JSON appropriée
         if ($exception instanceof HttpExceptionInterface) {
             $statusCode = $exception->getStatusCode();
             $message = $exception->getMessage() ?: 'An error occurred';
-
-            // Enrichir avec des liens utiles selon le type d'erreur
-            $links = $this->getHelpfulLinks($statusCode, $message);
+            $links = $this->getHelpfulLinks($statusCode);
 
             $response = match ($statusCode) {
                 404 => ApiResponse::notFound($message, $links),
@@ -53,82 +42,37 @@ class ApiExceptionListener
                 default => ApiResponse::error($message, $statusCode, null, $links),
             };
         } else {
-            // Erreur non HTTP (exception générale)
             $response = ApiResponse::internalServerError(
                 'An unexpected error occurred',
-                $this->getHelpfulLinks(500, 'Internal Server Error')
+                $this->getHelpfulLinks(500)
             );
         }
 
         $event->setResponse($response);
     }
 
-        /**
-         * Retourne les liens utiles basés sur le type d'erreur
-         */
-    private function getHelpfulLinks(int $statusCode, string $message): ?array
+    private function getHelpfulLinks(int $statusCode): ?array
     {
         return match ($statusCode) {
             401 => [
-                'admin_login' => [
-                    'href' => $this->urlGenerator->generate('api_admin_login'),
-                    'method' => 'POST',
-                    'title' => 'Connexion administrateur'
-                ],
-                'client_login' => [
-                    'href' => $this->urlGenerator->generate('api_client_login'),
-                    'method' => 'POST',
-                    'title' => 'Connexion client'
-                ],
+                'admin_login' => $this->hateoas->createLink('admin_login', $this->hateoas->getAdminLoginUrl(), 'POST', 'Connexion administrateur'),
+                'client_login' => $this->hateoas->createLink('client_login', $this->hateoas->getClientLoginUrl(), 'POST', 'Connexion client'),
             ],
             404 => [
-                'api_root' => [
-                    'href' => $this->urlGenerator->generate('api_root'),
-                    'method' => 'GET',
-                    'title' => 'Découvrir les endpoints disponibles'
-                ],
-                'products' => [
-                    'href' => $this->urlGenerator->generate('api_products_list'),
-                    'method' => 'GET',
-                    'title' => 'Lister les produits'
-                ],
-                'client_profile' => [
-                    'href' => $this->urlGenerator->generate('api_clients_list'),
-                    'method' => 'GET',
-                    'title' => 'Profil du client'
-                ],
-                'client_users' => [
-                    'href' => $this->urlGenerator->generate('api_clients_list_users'),
-                    'method' => 'GET',
-                    'title' => 'Liste des utilisateurs du client'
-                ],
+                'api_root' => $this->hateoas->createLink('root', $this->hateoas->getRootUrl(), 'GET', 'Découvrir l\'API'),
+                'products' => $this->hateoas->createLink('products', $this->hateoas->getProductsListUrl(), 'GET', 'Lister les produits'),
+                'client_profile' => $this->hateoas->createClientLinks(0, 'Client')['self'], // template
+                'client_users' => $this->hateoas->createClientLinks(0, 'Client')['users'],
             ],
             403 => [
-                'api_root' => [
-                    'href' => $this->urlGenerator->generate('api_root'),
-                    'method' => 'GET',
-                    'title' => 'Retour à l\'API'
-                ],
-                'client_profile' => [
-                    'href' => $this->urlGenerator->generate('api_clients_list'),
-                    'method' => 'GET',
-                    'title' => 'Profil du client (si connecté)'
-                ],
-                'client_users' => [
-                    'href' => $this->urlGenerator->generate('api_clients_list_users'),
-                    'method' => 'GET',
-                    'title' => 'Liste des utilisateurs du client (si connecté)'
-                ],
+                'api_root' => $this->hateoas->createLink('root', $this->hateoas->getRootUrl(), 'GET', 'Retour à l\'API'),
+                'client_profile' => $this->hateoas->createClientLinks(0, 'Client')['self'],
+                'client_users' => $this->hateoas->createClientLinks(0, 'Client')['users'],
             ],
             500 => [
-                'api_status' => [
-                    'href' => $this->urlGenerator->generate('api_status'),
-                    'method' => 'GET',
-                    'title' => 'Vérifier l\'état de l\'API'
-                ],
+                'api_status' => $this->hateoas->createLink('status', $this->hateoas->getStatusUrl(), 'GET', 'Vérifier l\'état de l\'API'),
             ],
             default => null,
         };
     }
-
 }

@@ -54,15 +54,15 @@ class RootController extends AbstractController
             ),
             'client_profile' => $this->hateoas->createLink(
                 'client_profile',
-                str_replace('%7BclientId%7D', '{clientId}', $this->generateUrl('api_clients_show', ['clientId' => '{clientId}'])),
+                $this->generateUrl('api_clients_list'), // <-- client authentifié
                 'GET',
-                'Profil du client authentifié (template, nécessite auth)'
+                'Profil du client authentifié (nécessite auth)'
             ),
             'client_users' => $this->hateoas->createLink(
                 'client_users',
-                str_replace('%7BclientId%7D', '{clientId}', $this->generateUrl('api_clients_list_users', ['clientId' => '{clientId}'])),
+                $this->generateUrl('api_clients_list_users'), // <-- utilisateurs du client
                 'GET',
-                'Utilisateurs du client (template, nécessite auth)'
+                'Liste des utilisateurs du client (nécessite auth)'
             ),
         ];
 

@@ -63,9 +63,9 @@ class ApiExceptionListener
         $event->setResponse($response);
     }
 
-    /**
-     * Retourne les liens utiles basés sur le type d'erreur
-     */
+        /**
+         * Retourne les liens utiles basés sur le type d'erreur
+         */
     private function getHelpfulLinks(int $statusCode, string $message): ?array
     {
         return match ($statusCode) {
@@ -92,12 +92,32 @@ class ApiExceptionListener
                     'method' => 'GET',
                     'title' => 'Lister les produits'
                 ],
+                'client_profile' => [
+                    'href' => $this->urlGenerator->generate('api_clients_list'),
+                    'method' => 'GET',
+                    'title' => 'Profil du client'
+                ],
+                'client_users' => [
+                    'href' => $this->urlGenerator->generate('api_clients_list_users'),
+                    'method' => 'GET',
+                    'title' => 'Liste des utilisateurs du client'
+                ],
             ],
             403 => [
                 'api_root' => [
                     'href' => $this->urlGenerator->generate('api_root'),
                     'method' => 'GET',
                     'title' => 'Retour à l\'API'
+                ],
+                'client_profile' => [
+                    'href' => $this->urlGenerator->generate('api_clients_list'),
+                    'method' => 'GET',
+                    'title' => 'Profil du client (si connecté)'
+                ],
+                'client_users' => [
+                    'href' => $this->urlGenerator->generate('api_clients_list_users'),
+                    'method' => 'GET',
+                    'title' => 'Liste des utilisateurs du client (si connecté)'
                 ],
             ],
             500 => [
@@ -110,4 +130,5 @@ class ApiExceptionListener
             default => null,
         };
     }
+
 }

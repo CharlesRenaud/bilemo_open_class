@@ -385,7 +385,7 @@ class ClientController extends AbstractController
         $data['_links'] = [
             'self' => $this->hateoas->createLink(
                 'self',
-                $this->generateUrl('api_clients_show', ['clientId' => $client->getId()]),
+                $this->generateUrl('api_clients_list'),
                 'GET',
                 $client->getName()
             ),

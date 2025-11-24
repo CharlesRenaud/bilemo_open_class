@@ -26,7 +26,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
  * - Les clients ne peuvent accéder qu'à leurs propres données
  * - Les admins peuvent accéder à toutes les données
  */
-#[Route('/api/clients', name: 'api_clients_')]
+#[Route('/api/clients', name: 'api_clients_', requirements: [])]
 #[IsGranted('ROLE_CLIENT')]
 class ClientController extends AbstractController
 {
@@ -36,6 +36,32 @@ class ClientController extends AbstractController
         private CacheService $cacheService,
         private HateoasBuilder $hateoas,
     ) {
+    }
+
+    /**
+     * GET /api/clients - Récupère les détails du client authentifié
+     * 
+     * Sécurité : Retourne automatiquement les données du client authentifié
+     */
+    #[Route('', name: 'list', methods: ['GET'])]
+    public function list(
+        #[CurrentUser] ?ApiUser $currentUser,
+    ): JsonResponse {
+        $clientId = $currentUser->getId();
+        $cacheKey = sprintf('client_%d', $clientId);
+
+        $client = $this->cacheService->get($cacheKey, function () use ($clientId): ?Client {
+            return $this->clientRepository->find($clientId);
+        });
+
+        if (!$client) {
+            return ApiResponse::notFound('Client not found');
+        }
+
+        $response = ApiResponse::success($this->serializeClientWithLinks($client));
+        $this->setCacheHeaders($response, 3600);
+
+        return $response;
     }
 
     /**
@@ -75,6 +101,7 @@ class ClientController extends AbstractController
 
         return $response;
     }
+
 
     /**
      * GET /api/clients/{clientId}/users - Liste les utilisateurs du client

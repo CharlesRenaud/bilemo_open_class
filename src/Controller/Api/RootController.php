@@ -5,9 +5,7 @@ namespace App\Controller\Api;
 use App\Service\HateoasBuilder;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/api', name: 'api_')]
 class RootController extends AbstractController
@@ -19,11 +17,6 @@ class RootController extends AbstractController
 
     /**
      * GET /api - Endpoint racine découvrable
-     * 
-     * Retourne tous les endpoints disponibles avec leurs liens HATEOAS.
-     * Permet au client de découvrir l'API sans coder les URLs en dur.
-     * 
-     * C'est le point d'entrée pour une API Level 3 (Richardson).
      */
     #[Route('', name: 'root', methods: ['GET'])]
     public function root(): JsonResponse
@@ -43,7 +36,7 @@ class RootController extends AbstractController
             ),
             'product_detail' => $this->hateoas->createLink(
                 'product_detail',
-                $this->generateUrl('api_products_show', ['id' => '{id}']),
+                str_replace('%7Bid%7D', '{id}', $this->generateUrl('api_products_show', ['id' => '{id}'])),
                 'GET',
                 'Détails d\'un produit (template)'
             ),
@@ -61,13 +54,13 @@ class RootController extends AbstractController
             ),
             'client_profile' => $this->hateoas->createLink(
                 'client_profile',
-                $this->generateUrl('api_clients_show', ['clientId' => '{clientId}']),
+                str_replace('%7BclientId%7D', '{clientId}', $this->generateUrl('api_clients_show', ['clientId' => '{clientId}'])),
                 'GET',
                 'Profil du client authentifié (template, nécessite auth)'
             ),
             'client_users' => $this->hateoas->createLink(
                 'client_users',
-                $this->generateUrl('api_clients_list_users', ['clientId' => '{clientId}']),
+                str_replace('%7BclientId%7D', '{clientId}', $this->generateUrl('api_clients_list_users', ['clientId' => '{clientId}'])),
                 'GET',
                 'Utilisateurs du client (template, nécessite auth)'
             ),
@@ -85,7 +78,7 @@ class RootController extends AbstractController
             'data' => $data,
         ]);
 
-        // Ajouter le cache HTTP
+        // Cache HTTP
         $response->setPublic();
         $response->setMaxAge(86400); // 24 heures
         $response->headers->set('Cache-Control', 'public, max-age=86400, must-revalidate');
@@ -95,9 +88,6 @@ class RootController extends AbstractController
 
     /**
      * GET /api/status - Vérifier l'état de l'API
-     * 
-     * Endpoint de santé pour vérifier que l'API répond correctement.
-     * Utile pour les monitoring et health checks.
      */
     #[Route('/status', name: 'status', methods: ['GET'])]
     public function status(): JsonResponse
@@ -127,7 +117,7 @@ class RootController extends AbstractController
             'data' => $data,
         ]);
 
-        // Pas de cache pour cet endpoint (on veut l'état en temps réel)
+        // Pas de cache pour cet endpoint
         $response->setPrivate();
         $response->setMaxAge(0);
 

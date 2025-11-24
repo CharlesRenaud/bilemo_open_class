@@ -3,13 +3,14 @@
 namespace App\Entity;
 
 use App\Repository\ClientRepository;
+use App\Security\AuthenticableEntity;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: ClientRepository::class)]
 #[ORM\HasLifecycleCallbacks]
-class Client
+class Client implements AuthenticableEntity
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -52,6 +53,11 @@ class Client
     public function onPreUpdate(): void
     {
         $this->updatedAt = new \DateTime();
+    }
+
+    public function getAuthType(): string
+    {
+        return 'client';
     }
 
     // --- Getters / Setters ---

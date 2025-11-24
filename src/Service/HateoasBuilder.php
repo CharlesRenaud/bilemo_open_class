@@ -2,22 +2,8 @@
 
 namespace App\Service;
 
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
-/**
- * Service pour générer des hypermédias HATEOAS
- * 
- * Respecte le niveau 3 du modèle de Richardson en ajoutant
- * des liens hypermédias qui permettent au client de découvrir
- * les actions disponibles sans avoir besoin de coder les URLs en dur.
- * 
- * Bonnes pratiques :
- * - Liens avec rel semantique (self, next, prev, first, last, etc.)
- * - Support des templates URL (RFC 6570)
- * - Liens optionnels basés sur le contexte
- * - Caching des relations calculées
- */
 class HateoasBuilder
 {
     public function __construct(
@@ -27,12 +13,6 @@ class HateoasBuilder
 
     /**
      * Crée un lien HATEOAS avec relation sémantique
-     * 
-     * @param string $rel La relation (ex: 'self', 'next', 'prev')
-     * @param string $href L'URL du lien
-     * @param string|null $method La méthode HTTP (GET, POST, etc.)
-     * @param string|null $title Un titre descriptif
-     * @return array Le lien formaté
      */
     public function createLink(
         string $rel,
@@ -54,15 +34,119 @@ class HateoasBuilder
     }
 
     /**
-     * Génère les liens de pagination pour une collection
-     * 
-     * @param int $page Page actuelle
-     * @param int $limit Limite par page
-     * @param int $total Nombre total d'éléments
-     * @param string $routeName Le nom de la route
-     * @param array $params Paramètres additionnels de la route
-     * @return array Les liens de pagination
+     * Génère tous les liens HATEOAS pour un client
      */
+    public function createClientLinks(int $clientId, string $clientName): array
+    {
+        return [
+            'self' => $this->createLink(
+                'self',
+                $this->urlGenerator->generate('api_clients_list'),
+                'GET',
+                $clientName
+            ),
+            'users' => $this->createLink(
+                'users',
+                $this->urlGenerator->generate('api_clients_list_users'),
+                'GET',
+                'Liste des utilisateurs'
+            ),
+        ];
+    }
+
+    /**
+     * Génère tous les liens HATEOAS pour la liste des utilisateurs
+     */
+    public function createUsersListLinks(): array
+    {
+        return [
+            'self' => $this->createLink(
+                'self',
+                $this->urlGenerator->generate('api_clients_list_users'),
+                'GET',
+                'Utilisateurs du client authentifié'
+            ),
+            'client' => $this->createLink(
+                'client',
+                $this->urlGenerator->generate('api_clients_list'),
+                'GET',
+                'Retour au client'
+            ),
+            'create_user' => $this->createLink(
+                'create_user',
+                $this->urlGenerator->generate('api_clients_create_user'),
+                'POST',
+                'Créer un nouvel utilisateur'
+            ),
+        ];
+    }
+
+    /**
+     * Génère tous les liens HATEOAS pour un utilisateur individuel
+     */
+    public function createUserLinks(int $userId, string $userName, bool $includeList = true): array
+    {
+        $links = [
+            'self' => $this->createLink(
+                'self',
+                $this->urlGenerator->generate('api_clients_show_user', ['userId' => $userId]),
+                'GET',
+                $userName
+            ),
+            'update' => $this->createLink(
+                'update',
+                $this->urlGenerator->generate('api_clients_update_user', ['userId' => $userId]),
+                'PUT',
+                'Modifier cet utilisateur'
+            ),
+            'delete' => $this->createLink(
+                'delete',
+                $this->urlGenerator->generate('api_clients_delete_user', ['userId' => $userId]),
+                'DELETE',
+                'Supprimer cet utilisateur'
+            ),
+        ];
+
+        if ($includeList) {
+            $links['list'] = $this->createLink(
+                'list',
+                $this->urlGenerator->generate('api_clients_list_users'),
+                'GET',
+                'Retour à la liste des utilisateurs'
+            );
+        }
+
+        return $links;
+    }
+
+    /**
+     * Génère les liens pour une erreur 404 utilisateur ou après suppression
+     */
+    public function createUserNotFoundLinks(bool $includeCreate = false): array
+    {
+        $links = [
+            'users' => $this->createLink(
+                'users',
+                $this->urlGenerator->generate('api_clients_list_users'),
+                'GET',
+                'Retour à la liste des utilisateurs'
+            ),
+        ];
+
+        if ($includeCreate) {
+            $links['create_user'] = $this->createLink(
+                'create_user',
+                $this->urlGenerator->generate('api_clients_create_user'),
+                'POST',
+                'Créer un nouvel utilisateur'
+            );
+        }
+
+        return $links;
+    }
+
+    // ... autres méthodes existantes (pagination, etc.)
+
     public function createPaginationLinks(
         int $page,
         int $limit,
@@ -73,7 +157,6 @@ class HateoasBuilder
         $maxPages = (int) ceil($total / $limit);
         $links = [];
 
-        // Lien self
         $links['self'] = $this->createLink(
             'self',
             $this->urlGenerator->generate($routeName, array_merge($params, ['page' => $page, 'limit' => $limit])),
@@ -81,7 +164,6 @@ class HateoasBuilder
             sprintf('Page %d', $page)
         );
 
-        // Lien first
         if ($page > 1) {
             $links['first'] = $this->createLink(
                 'first',
@@ -91,7 +173,6 @@ class HateoasBuilder
             );
         }
 
-        // Lien prev
         if ($page > 1) {
             $links['prev'] = $this->createLink(
                 'prev',
@@ -101,7 +182,6 @@ class HateoasBuilder
             );
         }
 
-        // Lien next
         if ($page < $maxPages) {
             $links['next'] = $this->createLink(
                 'next',
@@ -111,7 +191,6 @@ class HateoasBuilder
             );
         }
 
-        // Lien last
         if ($page < $maxPages) {
             $links['last'] = $this->createLink(
                 'last',
@@ -124,131 +203,6 @@ class HateoasBuilder
         return $links;
     }
 
-    /**
-     * Génère un lien vers une ressource individuelle
-     * 
-     * @param string $routeName Le nom de la route
-     * @param int|string $id L'ID de la ressource
-     * @param array $params Paramètres additionnels
-     * @param string $title Titre descriptif optionnel
-     * @return array Le lien formaté
-     */
-    public function createResourceLink(
-        string $routeName,
-        int|string $id,
-        array $params = [],
-        ?string $title = null,
-    ): array {
-        return $this->createLink(
-            'self',
-            $this->urlGenerator->generate($routeName, array_merge($params, ['id' => $id])),
-            'GET',
-            $title
-        );
-    }
-
-    /**
-     * Génère un lien vers une action de création
-     * 
-     * @param string $routeName Le nom de la route
-     * @param array $params Paramètres de la route
-     * @param string $title Titre descriptif
-     * @return array Le lien formaté
-     */
-    public function createCreateLink(
-        string $routeName,
-        array $params = [],
-        ?string $title = null,
-    ): array {
-        return $this->createLink(
-            'create',
-            $this->urlGenerator->generate($routeName, $params),
-            'POST',
-            $title ?? 'Créer une nouvelle ressource'
-        );
-    }
-
-    /**
-     * Génère un lien vers une action de modification
-     * 
-     * @param string $routeName Le nom de la route
-     * @param int|string $id L'ID de la ressource
-     * @param array $params Paramètres additionnels
-     * @param string $title Titre descriptif
-     * @return array Le lien formaté
-     */
-    public function createUpdateLink(
-        string $routeName,
-        int|string $id,
-        array $params = [],
-        ?string $title = null,
-    ): array {
-        return $this->createLink(
-            'update',
-            $this->urlGenerator->generate($routeName, array_merge($params, ['id' => $id])),
-            'PUT',
-            $title ?? 'Modifier la ressource'
-        );
-    }
-
-    /**
-     * Génère un lien vers une action de suppression
-     * 
-     * @param string $routeName Le nom de la route
-     * @param int|string $id L'ID de la ressource
-     * @param array $params Paramètres additionnels
-     * @param string $title Titre descriptif
-     * @return array Le lien formaté
-     */
-    public function createDeleteLink(
-        string $routeName,
-        int|string $id,
-        array $params = [],
-        ?string $title = null,
-    ): array {
-        return $this->createLink(
-            'delete',
-            $this->urlGenerator->generate($routeName, array_merge($params, ['id' => $id])),
-            'DELETE',
-            $title ?? 'Supprimer la ressource'
-        );
-    }
-
-    /**
-     * Génère des liens vers des ressources liées
-     * 
-     * Utile pour les relations entre ressources (produits → marques, etc.)
-     * 
-     * @param array $relations Tableau de relations [rel => [routeName => ..., id => ...]]
-     * @return array Les liens générés
-     */
-    public function createRelationLinks(array $relations): array
-    {
-        $links = [];
-
-        foreach ($relations as $rel => $config) {
-            if (!isset($config['route'], $config['id'])) {
-                continue;
-            }
-
-            $links[$rel] = $this->createLink(
-                $rel,
-                $this->urlGenerator->generate($config['route'], ['id' => $config['id']]),
-                $config['method'] ?? 'GET',
-                $config['title'] ?? null
-            );
-        }
-
-        return $links;
-    }
-
-    /**
-     * Ajoute les liens HATEOAS à une ressource
-     * 
-     * @param array $resource La ressource à enrichir
-     * @param array $links Les liens à ajouter
-     * @return array La ressource avec les liens
-     */
     public function addLinks(array $resource, array $links): array
     {
         if (!empty($links)) {

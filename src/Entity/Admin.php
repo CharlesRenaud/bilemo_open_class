@@ -4,11 +4,12 @@ namespace App\Entity;
 
 use App\Enum\Role;
 use App\Repository\AdminRepository;
+use App\Security\AuthenticableEntity;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: AdminRepository::class)]
 #[ORM\HasLifecycleCallbacks]
-class Admin
+class Admin implements AuthenticableEntity
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -43,6 +44,11 @@ class Admin
     public function onPreUpdate(): void
     {
         $this->updatedAt = new \DateTime();
+    }
+
+    public function getAuthType(): string
+    {
+        return 'admin';
     }
 
     // --- Getters / Setters ---

@@ -49,6 +49,7 @@ security:
     access_control:
         # Public endpoints
         - { path: ^/api/status$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/doc$, roles: PUBLIC_ACCESS }
         - { path: ^/api/auth/admins$, roles: PUBLIC_ACCESS }
         - { path: ^/api/auth/clients$, roles: PUBLIC_ACCESS }
         

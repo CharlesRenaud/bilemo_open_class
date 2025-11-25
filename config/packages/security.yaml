@@ -11,52 +11,56 @@ security:
             pattern: ^/(_(profiler|wdt)|css|images|js)/
             security: false
         
+        # Login Admin
         admin_login:
-            pattern: ^/api/admin/login$
+            pattern: ^/api/auth/admins$
             stateless: true
             provider: api_provider
             json_login:
-                check_path: /api/admin/login
+                check_path: /api/auth/admins
                 username_path: email
                 password_path: password
                 success_handler: lexik_jwt_authentication.handler.authentication_success
                 failure_handler: lexik_jwt_authentication.handler.authentication_failure
         
+        # Login Client
         client_login:
-            pattern: ^/api/client/login$
+            pattern: ^/api/auth/clients$
             stateless: true
             provider: api_provider
             json_login:
-                check_path: /api/client/login
+                check_path: /api/auth/clients
                 username_path: email
                 password_path: password
                 success_handler: lexik_jwt_authentication.handler.authentication_success
                 failure_handler: lexik_jwt_authentication.handler.authentication_failure
         
+        # Protected API routes
         api:
             pattern: ^/api/
             stateless: true
             provider: api_provider
             jwt: ~
         
+        # Catch-all fallback
         main:
             lazy: true
     
     access_control:
+        # Public endpoints
         - { path: ^/api/status$, roles: PUBLIC_ACCESS }
-        - { path: ^/api/admin/login$, roles: PUBLIC_ACCESS }
-        - { path: ^/api/client/login$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/auth/admins$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/auth/clients$, roles: PUBLIC_ACCESS }
+        
+        # Protected API endpoints
         - { path: ^/api/, roles: [ROLE_ADMIN, ROLE_CLIENT] }
 
+# Configuration spécifique pour les tests (hashers plus légers)
 when@test:
     security:
         password_hashers:
-            # By default, password hashers are resource intensive and take time. This is
-            # important to generate secure password hashes. In tests however, secure hashes
-            # are not important, waste resources and increase test times. The following
-            # reduces the work factor to the lowest possible values.
             Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface:
                 algorithm: auto
-                cost: 4 # Lowest possible value for bcrypt
-                time_cost: 3 # Lowest possible value for argon
-                memory_cost: 10 # Lowest possible value for argon
+                cost: 4
+                time_cost: 3
+                memory_cost: 10

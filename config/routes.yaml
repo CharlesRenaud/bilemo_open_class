@@ -3,3 +3,11 @@ controllers:
         path: ../src/Controller/
         namespace: App\Controller
     type: attribute
+
+api_client_login:
+    path: /api/auth/clients
+    methods: [POST]
+
+api_admin_login:
+    path: /api/auth/admins
+    methods: [POST]

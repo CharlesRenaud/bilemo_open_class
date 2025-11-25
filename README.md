@@ -103,6 +103,23 @@ curl http://localhost:8000/api/status
 ```bash
 curl -H "Authorization: Bearer {token}" http://localhost:8000/api/products
 ```
+# 📚 Documentation API
+
+La documentation interactive de l’API est disponible ici :
+
+👉 **http://localhost:8000/api/doc**
+
+Elle permet de consulter et tester toutes les routes, d’ajouter un token JWT, et de visualiser les schémas des requêtes/réponses.
+
+## 🛠️ Technologies utilisées
+
+- **NelmioApiDocBundle** — Génération automatique de la doc OpenAPI.
+- **OpenAPI 3** — Standard utilisé pour décrire les endpoints, schémas et réponses.
+- **Attributs PHP (`OpenApi\Attributes`)** — Définition des routes, paramètres, modèles et réponses directement dans les contrôleurs.
+- **JWT (Bearer)** — Support d’authentification directement intégré dans l’interface de documentation.
+
+La documentation se met automatiquement à jour selon les attributs présents dans les contrôleurs.
+
 
 ## 📝 Notes importantes
 

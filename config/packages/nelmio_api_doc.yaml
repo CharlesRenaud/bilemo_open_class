@@ -1,0 +1,32 @@
+nelmio_api_doc:
+    documentation:
+        info:
+            title: 'API BILEMO'
+            description: 'API REST destinée aux clients de BILEMO pour la gestion des produits et utilisateurs'
+            version: '1.0.0'
+        servers:
+            - url: http://localhost:8000
+              description: 'Serveur de développement'
+            - url: https://api.bilemo.com
+              description: 'Serveur de production'
+        components:
+            securitySchemes:
+                Bearer:
+                    type: http
+                    scheme: bearer
+                    bearerFormat: JWT
+                    description: 'Authentification via token JWT (format: Bearer {token})'
+        security:
+            - Bearer: []
+    areas:
+        default:
+            path_patterns:
+                - ^/api(?!/doc$)
+            host_patterns:
+                - ^.*$
+    models:
+        names:
+            - { alias: ProductOutput, type: App\Dto\ProductOutput }
+            - { alias: ClientOutput, type: App\Dto\ClientOutput }
+            - { alias: UserOutput, type: App\Dto\UserOutput }
+            - { alias: UserInput, type: App\Dto\UserInput }

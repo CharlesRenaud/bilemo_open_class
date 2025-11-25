@@ -3,11 +3,13 @@
 namespace App\Controller\Api;
 
 use App\Service\HateoasBuilder;
+use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
 
 #[Route('/api', name: 'api_')]
+#[OA\Tag(name: 'General')]
 class RootController extends AbstractController
 {
     public function __construct(
@@ -15,10 +17,105 @@ class RootController extends AbstractController
     ) {
     }
 
-    /**
-     * GET /api - Endpoint racine découvrable
-     */
     #[Route('', name: 'root', methods: ['GET'])]
+    #[OA\Get(
+        path: '/api',
+        summary: 'Point d\'entrée principal de l\'API - Découverte des endpoints disponibles',
+        description: 'Retourne la liste de tous les endpoints disponibles avec leurs descriptions et liens HATEOAS',
+        tags: ['General']
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'Liste des endpoints de l\'API',
+        content: new OA\JsonContent(
+            type: 'object',
+            properties: [
+                new OA\Property(property: 'success', type: 'boolean', example: true),
+                new OA\Property(
+                    property: 'data',
+                    type: 'object',
+                    properties: [
+                        new OA\Property(property: 'message', type: 'string', example: 'Bienvenue sur l\'API BileMo'),
+                        new OA\Property(property: 'version', type: 'string', example: '1.0.0'),
+                        new OA\Property(
+                            property: 'description',
+                            type: 'string',
+                            example: 'API REST B2B pour accéder au catalogue de produits BileMo et gérer les utilisateurs clients'
+                        ),
+                        new OA\Property(
+                            property: '_links',
+                            type: 'object',
+                            properties: [
+                                new OA\Property(
+                                    property: 'self',
+                                    type: 'object',
+                                    properties: [
+                                        new OA\Property(property: 'href', type: 'string', example: '/api'),
+                                        new OA\Property(property: 'method', type: 'string', example: 'GET'),
+                                        new OA\Property(property: 'title', type: 'string', example: 'Endpoint racine de l\'API')
+                                    ]
+                                ),
+                                new OA\Property(
+                                    property: 'products',
+                                    type: 'object',
+                                    properties: [
+                                        new OA\Property(property: 'href', type: 'string', example: '/api/products'),
+                                        new OA\Property(property: 'method', type: 'string', example: 'GET'),
+                                        new OA\Property(property: 'title', type: 'string', example: 'Liste des produits BileMo')
+                                    ]
+                                ),
+                                new OA\Property(
+                                    property: 'product_detail',
+                                    type: 'object',
+                                    properties: [
+                                        new OA\Property(property: 'href', type: 'string', example: '/api/products/{id}'),
+                                        new OA\Property(property: 'method', type: 'string', example: 'GET'),
+                                        new OA\Property(property: 'title', type: 'string', example: 'Détails d\'un produit (template)')
+                                    ]
+                                ),
+                                new OA\Property(
+                                    property: 'admin_login',
+                                    type: 'object',
+                                    properties: [
+                                        new OA\Property(property: 'href', type: 'string', example: '/api/auth/admins'),
+                                        new OA\Property(property: 'method', type: 'string', example: 'POST'),
+                                        new OA\Property(property: 'title', type: 'string', example: 'Connexion administrateur')
+                                    ]
+                                ),
+                                new OA\Property(
+                                    property: 'client_login',
+                                    type: 'object',
+                                    properties: [
+                                        new OA\Property(property: 'href', type: 'string', example: '/api/auth/clients'),
+                                        new OA\Property(property: 'method', type: 'string', example: 'POST'),
+                                        new OA\Property(property: 'title', type: 'string', example: 'Connexion client')
+                                    ]
+                                ),
+                                new OA\Property(
+                                    property: 'client_profile',
+                                    type: 'object',
+                                    properties: [
+                                        new OA\Property(property: 'href', type: 'string', example: '/api/clients'),
+                                        new OA\Property(property: 'method', type: 'string', example: 'GET'),
+                                        new OA\Property(property: 'title', type: 'string', example: 'Profil du client authentifié (nécessite auth)')
+                                    ]
+                                ),
+                                new OA\Property(
+                                    property: 'client_users',
+                                    type: 'object',
+                                    properties: [
+                                        new OA\Property(property: 'href', type: 'string', example: '/api/clients/users'),
+                                        new OA\Property(property: 'method', type: 'string', example: 'GET'),
+                                        new OA\Property(property: 'title', type: 'string', example: 'Liste des utilisateurs du client (nécessite auth)')
+                                    ]
+                                )
+                            ]
+                        )
+                    ]
+                )
+            ]
+        )
+    )]
     public function root(): JsonResponse
     {
         $links = [
@@ -78,18 +175,74 @@ class RootController extends AbstractController
             'data' => $data,
         ]);
 
-        // Cache HTTP
         $response->setPublic();
-        $response->setMaxAge(86400); // 24 heures
+        $response->setMaxAge(86400);
         $response->headers->set('Cache-Control', 'public, max-age=86400, must-revalidate');
 
         return $response;
     }
 
-    /**
-     * GET /api/status - Vérifier l'état de l'API
-     */
     #[Route('/status', name: 'status', methods: ['GET'])]
+    #[OA\Get(
+        path: '/api/status',
+        summary: 'Vérifie l\'état de santé de l\'API',
+        description: 'Endpoint de health check pour vérifier que l\'API est opérationnelle',
+        tags: ['General']
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'L\'API est opérationnelle',
+        content: new OA\JsonContent(
+            type: 'object',
+            properties: [
+                new OA\Property(property: 'success', type: 'boolean', example: true),
+                new OA\Property(
+                    property: 'data',
+                    type: 'object',
+                    properties: [
+                        new OA\Property(
+                            property: 'status',
+                            type: 'string',
+                            example: 'operational',
+                            description: 'État de l\'API (operational, degraded, down)'
+                        ),
+                        new OA\Property(
+                            property: 'timestamp',
+                            type: 'string',
+                            format: 'date-time',
+                            example: '2024-01-15T10:30:00+00:00',
+                            description: 'Timestamp UTC de la réponse'
+                        ),
+                        new OA\Property(property: 'version', type: 'string', example: '1.0.0'),
+                        new OA\Property(
+                            property: '_links',
+                            type: 'object',
+                            properties: [
+                                new OA\Property(
+                                    property: 'self',
+                                    type: 'object',
+                                    properties: [
+                                        new OA\Property(property: 'href', type: 'string', example: '/api/status'),
+                                        new OA\Property(property: 'method', type: 'string', example: 'GET'),
+                                        new OA\Property(property: 'title', type: 'string', example: 'État actuel de l\'API')
+                                    ]
+                                ),
+                                new OA\Property(
+                                    property: 'root',
+                                    type: 'object',
+                                    properties: [
+                                        new OA\Property(property: 'href', type: 'string', example: '/api'),
+                                        new OA\Property(property: 'method', type: 'string', example: 'GET'),
+                                        new OA\Property(property: 'title', type: 'string', example: 'Retour à l\'endpoint racine')
+                                    ]
+                                )
+                            ]
+                        )
+                    ]
+                )
+            ]
+        )
+    )]
     public function status(): JsonResponse
     {
         $data = [
@@ -117,7 +270,6 @@ class RootController extends AbstractController
             'data' => $data,
         ]);
 
-        // Pas de cache pour cet endpoint
         $response->setPrivate();
         $response->setMaxAge(0);
 

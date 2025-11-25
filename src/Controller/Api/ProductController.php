@@ -3,36 +3,128 @@
 namespace App\Controller\Api;
 
 use App\Api\Response\ApiResponse;
+use App\Dto\ProductOutput;
 use App\Entity\Product;
 use App\Repository\ProductRepository;
 use App\Service\CacheService;
 use App\Service\HateoasBuilder;
+use Nelmio\ApiDocBundle\Attribute\Model;
+use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
 #[Route('/api/products', name: 'api_products_')]
+#[OA\Tag(name: 'Products')]
 class ProductController extends AbstractController
 {
     public function __construct(
         private ProductRepository $productRepository,
         private CacheService $cacheService,
         private HateoasBuilder $hateoas,
-    ) {
-    }
+    ) {}
 
-    /**
-     * GET /api/products - Récupère la liste paginée des produits
-     * 
-     * Query parameters:
-     * - page: int (default: 1)
-     * - limit: int (default: 10, max: 100)
-     * - sort: string (default: 'id', options: 'id', 'name', 'price', 'brand')
-     * - order: string (default: 'ASC', options: 'ASC', 'DESC')
-     */
     #[Route('', name: 'list', methods: ['GET'])]
+    #[OA\Get(
+        path: '/api/products',
+        summary: 'Récupère la liste paginée des produits',
+        tags: ['Products']
+    )]
+    #[OA\Parameter(
+        name: 'page',
+        in: 'query',
+        description: 'Numéro de page',
+        required: false,
+        schema: new OA\Schema(type: 'integer', default: 1, minimum: 1)
+    )]
+    #[OA\Parameter(
+        name: 'limit',
+        in: 'query',
+        description: 'Nombre d\'éléments par page',
+        required: false,
+        schema: new OA\Schema(type: 'integer', default: 10, minimum: 1, maximum: 100)
+    )]
+    #[OA\Parameter(
+        name: 'sort',
+        in: 'query',
+        description: 'Champ de tri',
+        required: false,
+        schema: new OA\Schema(
+            type: 'string',
+            default: 'id',
+            enum: ['id', 'name', 'price', 'brand', 'createdAt']
+        )
+    )]
+    #[OA\Parameter(
+        name: 'order',
+        in: 'query',
+        description: 'Ordre de tri',
+        required: false,
+        schema: new OA\Schema(
+            type: 'string',
+            default: 'ASC',
+            enum: ['ASC', 'DESC']
+        )
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'Liste paginée des produits récupérée avec succès',
+        content: new OA\JsonContent(
+            type: 'object',
+            properties: [
+                new OA\Property(
+                    property: 'items',
+                    type: 'array',
+                    items: new OA\Items(ref: '#/components/schemas/ProductOutput')
+                ),
+                new OA\Property(
+                    property: 'pagination',
+                    type: 'object',
+                    properties: [
+                        new OA\Property(property: 'page', type: 'integer', example: 1),
+                        new OA\Property(property: 'limit', type: 'integer', example: 10),
+                        new OA\Property(property: 'total', type: 'integer', example: 50),
+                        new OA\Property(property: 'pages', type: 'integer', example: 5)
+                    ]
+                ),
+                new OA\Property(
+                    property: '_links',
+                    type: 'object',
+                    properties: [
+                        new OA\Property(
+                            property: 'self',
+                            type: 'object',
+                            properties: [
+                                new OA\Property(property: 'href', type: 'string', example: '/api/products?page=1&limit=10'),
+                                new OA\Property(property: 'method', type: 'string', example: 'GET')
+                            ]
+                        ),
+                        new OA\Property(
+                            property: 'next',
+                            type: 'object',
+                            properties: [
+                                new OA\Property(property: 'href', type: 'string', example: '/api/products?page=2&limit=10'),
+                                new OA\Property(property: 'method', type: 'string', example: 'GET')
+                            ]
+                        ),
+                        new OA\Property(
+                            property: 'prev',
+                            type: 'object',
+                            properties: [
+                                new OA\Property(property: 'href', type: 'string', example: '/api/products?page=1&limit=10'),
+                                new OA\Property(property: 'method', type: 'string', example: 'GET')
+                            ]
+                        )
+                    ]
+                )
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 400,
+        description: 'Paramètres de requête invalides'
+    )]
     public function list(Request $request): JsonResponse
     {
         $page = max(1, (int) $request->query->get('page', 1));
@@ -40,7 +132,6 @@ class ProductController extends AbstractController
         $sort = $this->validateSort($request->query->get('sort', 'id'));
         $order = strtoupper($request->query->get('order', 'ASC')) === 'DESC' ? 'DESC' : 'ASC';
 
-        // Clé de cache unique basée sur les paramètres de pagination et tri
         $cacheKey = sprintf('products_list_%d_%d_%s_%s', $page, $limit, $sort, $order);
 
         $data = $this->cacheService->get($cacheKey, function () use ($page, $limit, $sort, $order): array {
@@ -48,7 +139,6 @@ class ProductController extends AbstractController
             $products = $this->productRepository->findPaginated($offset, $limit, $sort, $order);
             $total = $this->productRepository->count([]);
 
-            // Sérialiser les produits avec HATEOAS
             $items = array_map(fn(Product $p) => $this->serializeProductWithLinks($p), $products);
 
             return [
@@ -62,7 +152,6 @@ class ProductController extends AbstractController
             ];
         });
 
-        // Ajouter les liens de pagination
         $paginationLinks = $this->hateoas->createPaginationLinks(
             $page,
             $limit,
@@ -79,26 +168,58 @@ class ProductController extends AbstractController
         return $response;
     }
 
-    /**
-     * GET /api/products/{id} - Récupère les détails d'un produit
-     */
     #[Route('/{id}', name: 'show', methods: ['GET'])]
+    #[OA\Get(
+        path: '/api/products/{id}',
+        summary: 'Récupère les détails d\'un produit',
+        tags: ['Products']
+    )]
+    #[OA\Parameter(
+        name: 'id',
+        in: 'path',
+        description: 'ID du produit',
+        required: true,
+        schema: new OA\Schema(type: 'integer', minimum: 1)
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'Détails du produit récupérés avec succès',
+        content: new OA\JsonContent(ref: '#/components/schemas/ProductOutput')
+    )]
+    #[OA\Response(
+        response: 404,
+        description: 'Produit non trouvé',
+        content: new OA\JsonContent(
+            type: 'object',
+            properties: [
+                new OA\Property(property: 'error', type: 'string', example: 'Product not found'),
+                new OA\Property(
+                    property: '_links',
+                    type: 'object',
+                    properties: [
+                        new OA\Property(
+                            property: 'list',
+                            type: 'object',
+                            properties: [
+                                new OA\Property(property: 'href', type: 'string', example: '/api/products'),
+                                new OA\Property(property: 'method', type: 'string', example: 'GET'),
+                                new OA\Property(property: 'title', type: 'string', example: 'Retour à la liste des produits')
+                            ]
+                        )
+                    ]
+                )
+            ]
+        )
+    )]
     public function show(int $id): JsonResponse
     {
         $cacheKey = sprintf('product_%d', $id);
 
-        $product = $this->cacheService->get($cacheKey, function () use ($id): ?Product {
-            return $this->productRepository->find($id);
-        });
+        $product = $this->cacheService->get($cacheKey, fn() => $this->productRepository->find($id));
 
         if (!$product) {
             $links = [
-                'list' => $this->hateoas->createLink(
-                    'list',
-                    $this->generateUrl('api_products_list'),
-                    'GET',
-                    'Retour à la liste des produits'
-                ),
+                'list' => $this->hateoas->createLink('list', $this->generateUrl('api_products_list'), 'GET', 'Retour à la liste des produits'),
             ];
             return ApiResponse::notFound('Product not found', $links);
         }
@@ -109,9 +230,6 @@ class ProductController extends AbstractController
         return $response;
     }
 
-    /**
-     * Sérialise un produit sans les liens (pour les collections)
-     */
     private function serializeProduct(Product $product): array
     {
         return [
@@ -128,41 +246,23 @@ class ProductController extends AbstractController
         ];
     }
 
-    /**
-     * Sérialise un produit avec les liens HATEOAS
-     */
     private function serializeProductWithLinks(Product $product): array
     {
         $data = $this->serializeProduct($product);
 
-        // Ajouter les liens HATEOAS
         $links = [
-            'self' => $this->hateoas->createResourceLink(
-                'api_products_show',
-                $product->getId(),
-                title: $product->getName()
-            ),
+            'self' => $this->hateoas->createResourceLink('api_products_show', $product->getId(), title: $product->getName()),
         ];
 
         return $this->hateoas->addLinks($data, $links);
     }
 
-    /**
-     * Valide et retourne le paramètre de tri
-     */
     private function validateSort(string $sort): string
     {
         $allowedSorts = ['id', 'name', 'price', 'brand', 'createdAt'];
         return in_array($sort, $allowedSorts) ? $sort : 'id';
     }
 
-    /**
-     * Définit les en-têtes de cache HTTP (RFC 7234)
-     * - Cache-Control: max-age pour le cache public
-     * - ETag pour la validation
-     * 
-     * @param int $maxAge Durée en secondes
-     */
     private function setCacheHeaders(JsonResponse $response, int $maxAge = 3600): void
     {
         $response->setPublic();

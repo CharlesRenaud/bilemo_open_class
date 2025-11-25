@@ -91,7 +91,7 @@ lexik_jwt_authentication:
 
 ### Sécurité (`config/packages/security.yaml`)
 
-- Endpoints `/api/admin/login` et `/api/client/login` publics
+- Endpoints `/api/auth/admins` et `/api/auth/clients` publics
 - Tous les autres endpoints `/api/*` nécessitent JWT
 - Rôles : `ROLE_ADMIN`, `ROLE_CLIENT`
 

@@ -1,5 +1,7 @@
 # BileMo API
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/c65f053ac0654e4f82dbddf3886abc07)](https://app.codacy.com/gh/CharlesRenaud/bilemo_open_class?utm_source=github.com&utm_medium=referral&utm_content=CharlesRenaud/bilemo_open_class&utm_campaign=Badge_Grade)
+
 API REST Symfony pour la gestion des produits mobiles avec authentification JWT.
 
 ## 📋 Prérequis

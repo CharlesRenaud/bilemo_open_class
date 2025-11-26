@@ -24,9 +24,17 @@ nelmio_api_doc:
                 - ^/api(?!/doc$)
             host_patterns:
                 - ^.*$
+            
     models:
         names:
             - { alias: ProductOutput, type: App\Dto\ProductOutput }
             - { alias: ClientOutput, type: App\Dto\ClientOutput }
             - { alias: UserOutput, type: App\Dto\UserOutput }
             - { alias: UserInput, type: App\Dto\UserInput }
+            - { alias: RootOutput, type: App\Dto\RootOutput }
+            - { alias: StatusOutput, type: App\Dto\StatusOutput }
+            - { alias: RootData, type: App\Dto\RootData }
+            - { alias: AuthRequest, type: App\Dto\AuthRequest }
+            - { alias: AuthResponse, type: App\Dto\AuthResponse }
+            - { alias: Pagination, type: App\Dto\Pagination }
+            - { alias: ProductListResponse, type: App\Dto\ProductListResponse }

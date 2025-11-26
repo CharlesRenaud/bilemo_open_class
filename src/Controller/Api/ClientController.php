@@ -95,13 +95,14 @@ class ClientController extends AbstractController
                 new OA\Property(
                     property: 'items',
                     type: 'array',
-                    items: new OA\Items(ref: \App\Dto\UserOutput::class)
+                    items: new OA\Items(ref: '#/components/schemas/UserOutput')
                 ),
                 new OA\Property(property: 'count', type: 'integer', example: 42),
                 new OA\Property(property: '_links', type: 'object')
             ]
         )
     )]
+
     #[OA\Response(
         response: 401,
         description: 'Non authentifié'

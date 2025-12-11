@@ -18,6 +18,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 
 #[Route('/api/clients', name: 'api_clients_')]
 #[IsGranted('ROLE_CLIENT')]
@@ -213,52 +214,70 @@ class ClientController extends AbstractController
     )]
     #[OA\Response(
         response: 400,
-        description: 'Données invalides',
-        content: new OA\JsonContent(
-            type: 'object',
-            properties: [
-                new OA\Property(property: 'error', type: 'string', example: 'Validation failed'),
-                new OA\Property(
-                    property: 'errors',
-                    type: 'object',
-                    properties: [
-                        new OA\Property(property: 'firstname', type: 'string', example: 'firstname is required'),
-                        new OA\Property(property: 'email', type: 'string', example: 'email is required')
-                    ]
-                )
-            ]
-        )
+        description: 'Données invalides ou email déjà utilisé'
     )]
+    #[OA\Response(response: 404, description: 'Client non trouvé')]
     #[OA\Response(response: 401, description: 'Non authentifié')]
     public function createUser(#[CurrentUser] ?ApiUser $currentUser, Request $request): JsonResponse
     {
-        $clientId = $currentUser->getId();
-        $client = $this->clientRepository->find($clientId);
-        if (!$client) return ApiResponse::notFound('Client not found');
+        if (!$currentUser) {
+            return ApiResponse::unauthorized('Non authentifié');
+        }
 
-        $data = json_decode($request->getContent(), true) ?? [];
-        $errors = $this->validateUserData($data);
-        if ($errors) return ApiResponse::badRequest('Validation failed', $errors);
+        try {
+            $clientId = $currentUser->getId();
+            $client = $this->clientRepository->find($clientId);
 
-        $user = new User();
-        $user->setFirstname($data['firstname']);
-        $user->setLastname($data['lastname']);
-        $user->setEmail($data['email']);
-        $user->setPhone($data['phone'] ?? null);
-        $user->setClient($client);
+            if (!$client) {
+                return ApiResponse::notFound('Client non trouvé');
+            }
 
-        $em = $this->clientRepository->getEntityManager();
-        $em->persist($user);
-        $em->flush();
+            $data = json_decode($request->getContent(), true) ?? [];
 
-        $this->cacheService->delete(sprintf('client_%d_users', $clientId));
+            $errors = $this->validateUserData($data);
+            if ($errors) {
+                return ApiResponse::badRequest('Validation échouée', $errors);
+            }
 
-        $responseData = $this->serializeUser($user);
-        $userName = $user->getFirstname() . ' ' . $user->getLastname();
-        $responseData['_links'] = $this->hateoas->createUserLinks($user->getId(), $userName);
+            $em = $this->clientRepository->getEntityManager();
 
-        return ApiResponse::created($responseData);
+            $existingUser = $em->getRepository(User::class)->findOneBy(['email' => $data['email']]);
+            if ($existingUser) {
+                return ApiResponse::badRequest('Un utilisateur avec cet email existe déjà.', [
+                    'email' => 'Cet email est déjà utilisé'
+                ]);
+            }
+
+            $user = new User();
+            $user->setFirstname($data['firstname']);
+            $user->setLastname($data['lastname']);
+            $user->setEmail($data['email']);
+            $user->setPhone($data['phone'] ?? null);
+            $user->setClient($client);
+
+            $em->persist($user);
+            $em->flush();
+
+            $this->cacheService->delete(sprintf('client_%d_users', $clientId));
+
+            $responseData = $this->serializeUser($user);
+            $userName = $user->getFirstname() . ' ' . $user->getLastname();
+            $responseData['_links'] = $this->hateoas->createUserLinks($user->getId(), $userName);
+
+            return ApiResponse::created($responseData);
+
+        } catch (\Doctrine\DBAL\Exception\UniqueConstraintViolationException $e) {
+            return ApiResponse::badRequest('Un utilisateur avec cet email existe déjà.', [
+                'email' => 'Cet email est déjà utilisé'
+            ]);
+        } catch (\Exception $e) {
+            return ApiResponse::error('Une erreur est survenue lors de la création de l\'utilisateur.', [
+                'message' => $e->getMessage()
+            ]);
+        }
     }
+
+
 
     #[Route('/users/{userId}', name: 'delete_user', methods: ['DELETE'])]
     #[OA\Delete(
@@ -334,56 +353,70 @@ class ClientController extends AbstractController
         description: 'Utilisateur mis à jour avec succès',
         content: new OA\JsonContent(ref: '#/components/schemas/UserOutput')
     )]
-    #[OA\Response(
-        response: 400,
-        description: 'Données invalides'
-    )]
-    #[OA\Response(
-        response: 404,
-        description: 'Utilisateur non trouvé'
-    )]
-    #[OA\Response(
-        response: 401,
-        description: 'Non authentifié'
-    )]
+    #[OA\Response(response: 400, description: 'Données invalides ou email déjà utilisé')]
+    #[OA\Response(response: 404, description: 'Utilisateur non trouvé')]
+    #[OA\Response(response: 401, description: 'Non authentifié')]
     public function updateUser(
         int $userId,
         #[CurrentUser] ?ApiUser $currentUser,
         Request $request
     ): JsonResponse {
-        $clientId = $currentUser->getId();
-
-        $user = $this->userRepository->find($userId);
-        if (!$user || $user->getClient()->getId() !== $clientId) {
-            return ApiResponse::notFound('User not found', $this->hateoas->createUserNotFoundLinks());
+        if (!$currentUser) {
+            return ApiResponse::unauthorized('Non authentifié');
         }
 
-        $data = json_decode($request->getContent(), true) ?? [];
+        try {
+            $clientId = $currentUser->getId();
+            $user = $this->userRepository->find($userId);
 
-        $errors = $this->validateUserData($data);
-        if ($errors) {
-            return ApiResponse::badRequest('Validation failed', $errors);
+            if (!$user || $user->getClient()->getId() !== $clientId) {
+                return ApiResponse::notFound('Utilisateur non trouvé', $this->hateoas->createUserNotFoundLinks());
+            }
+
+            $data = json_decode($request->getContent(), true) ?? [];
+
+            $errors = $this->validateUserData($data);
+            if ($errors) {
+                return ApiResponse::badRequest('Validation échouée', $errors);
+            }
+
+            $em = $this->clientRepository->getEntityManager();
+
+            if (isset($data['email']) && $data['email'] !== $user->getEmail()) {
+                $existingUser = $em->getRepository(User::class)->findOneBy(['email' => $data['email']]);
+                if ($existingUser) {
+                    return ApiResponse::badRequest('Un utilisateur avec cet email existe déjà.', [
+                        'email' => 'Cet email est déjà utilisé'
+                    ]);
+                }
+            }
+
+            $user->setFirstname($data['firstname']);
+            $user->setLastname($data['lastname']);
+            $user->setEmail($data['email']);
+            $user->setPhone($data['phone'] ?? null);
+
+            $em->flush();
+
+            $this->cacheService->delete(sprintf('client_%d_users', $clientId));
+            $this->cacheService->delete(sprintf('client_%d_user_%d', $clientId, $userId));
+
+            $responseData = $this->serializeUser($user);
+            $userName = $user->getFirstname() . ' ' . $user->getLastname();
+            $responseData['_links'] = $this->hateoas->createUserLinks($userId, $userName);
+
+            return ApiResponse::success($responseData);
+
+        } catch (\Doctrine\DBAL\Exception\UniqueConstraintViolationException $e) {
+            return ApiResponse::badRequest('Un utilisateur avec cet email existe déjà.', [
+                'email' => 'Cet email est déjà utilisé'
+            ]);
+        } catch (\Exception $e) {
+            return ApiResponse::error('Une erreur est survenue lors de la mise à jour de l\'utilisateur.', [
+                'message' => $e->getMessage()
+            ]);
         }
-
-        $user->setFirstname($data['firstname']);
-        $user->setLastname($data['lastname']);
-        $user->setEmail($data['email']);
-        $user->setPhone($data['phone'] ?? null);
-
-        $em = $this->clientRepository->getEntityManager();
-        $em->flush();
-
-        // Supprime le cache pour que les GET soient à jour
-        $this->cacheService->delete(sprintf('client_%d_users', $clientId));
-        $this->cacheService->delete(sprintf('client_%d_user_%d', $clientId, $userId));
-
-        $responseData = $this->serializeUser($user);
-        $userName = $user->getFirstname() . ' ' . $user->getLastname();
-        $responseData['_links'] = $this->hateoas->createUserLinks($userId, $userName);
-
-        return ApiResponse::success($responseData);
     }
-
 
     private function serializeClient(Client $client): array
     {

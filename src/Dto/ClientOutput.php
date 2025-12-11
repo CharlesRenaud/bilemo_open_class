@@ -31,7 +31,7 @@ class ClientOutput
 
     #[OA\Property(
         property: 'email',
-        description: 'Adresse email du client',
+        description: 'Adresse email du client (doit être unique)',
         type: 'string',
         format: 'email',
         example: 'contact@orange.fr'
@@ -60,28 +60,9 @@ class ClientOutput
 
     #[OA\Property(
         property: '_links',
-        description: 'Liens HATEOAS',
+        description: 'Liens HATEOAS associés au client',
         type: 'object',
-        properties: [
-            new OA\Property(
-                property: 'self',
-                type: 'object',
-                properties: [
-                    new OA\Property(property: 'href', type: 'string', example: '/api/clients/1'),
-                    new OA\Property(property: 'method', type: 'string', example: 'GET'),
-                    new OA\Property(property: 'title', type: 'string', example: 'Détails du client')
-                ]
-            ),
-            new OA\Property(
-                property: 'projects',
-                type: 'object',
-                properties: [
-                    new OA\Property(property: 'href', type: 'string', example: '/api/clients/1/projects'),
-                    new OA\Property(property: 'method', type: 'string', example: 'GET'),
-                    new OA\Property(property: 'title', type: 'string', example: 'Liste des projets du client')
-                ]
-            )
-        ]
+        nullable: true
     )]
-    public array $_links;
+    public ?array $_links;
 }

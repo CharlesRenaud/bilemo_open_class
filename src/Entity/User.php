@@ -4,9 +4,14 @@ namespace App\Entity;
 
 use App\Repository\UserRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\HasLifecycleCallbacks]
+#[UniqueEntity(
+    fields: ['email'],
+    message: "Cet email est déjà utilisé par un autre client."
+)]
 class User
 {
     #[ORM\Id]
@@ -16,18 +21,29 @@ class User
 
     #[ORM\ManyToOne(targetEntity: Client::class, inversedBy: 'users')]
     #[ORM\JoinColumn(nullable: false)]
+    #[Assert\NotNull(message: "Un utilisateur doit être associé à un client.")]
     private ?Client $client = null;
 
     #[ORM\Column(length: 50)]
+    #[Assert\NotBlank(message: "Le prénom est obligatoire.")]
+    #[Assert\Length(max: 50)]
     private ?string $firstname = null;
 
     #[ORM\Column(length: 50)]
+    #[Assert\NotBlank(message: "Le nom est obligatoire.")]
+    #[Assert\Length(max: 50)]
     private ?string $lastname = null;
 
     #[ORM\Column(length: 255)]
+    #[Assert\NotBlank(message: "L'email est obligatoire.")]
+    #[Assert\Email(message: "L'email n'est pas valide.")]
     private ?string $email = null;
 
     #[ORM\Column(length: 20, nullable: true)]
+    #[Assert\Regex(
+        pattern: "/^\+?[0-9 ]+$/",
+        message: "Le numéro de téléphone n'est pas valide."
+    )]
     private ?string $phone = null;
 
     #[ORM\Column(type: 'datetime_immutable')]

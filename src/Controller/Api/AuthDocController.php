@@ -20,7 +20,7 @@ class AuthDocController extends AbstractController
         path: '/api/auth/clients',
         summary: 'Authentification client',
         description: 'Retourne un JWT si les identifiants client sont valides.',
-        tags: ['Authentication'] // doit correspondre au nom du tag
+        tags: ['Authentication']
     )]
     #[OA\RequestBody(
         required: true,

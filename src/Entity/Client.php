@@ -7,9 +7,14 @@ use App\Security\AuthenticableEntity;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: ClientRepository::class)]
 #[ORM\HasLifecycleCallbacks]
+#[UniqueEntity(
+    fields: ['email'],
+    message: "Cet email est déjà utilisé par un autre utilisateur."
+)]
 class Client implements AuthenticableEntity
 {
     #[ORM\Id]
@@ -21,17 +26,24 @@ class Client implements AuthenticableEntity
     private Collection $users;
 
     #[ORM\Column(length: 50)]
+    #[Assert\NotBlank(message: "Le nom est obligatoire.")]
+    #[Assert\Length(
+        max: 50,
+        maxMessage: "Le nom ne peut pas dépasser {{ limit }} caractères."
+    )]
     private ?string $name = null;
 
-    public function __construct()
-    {
-        $this->users = new ArrayCollection();
-    }
-
     #[ORM\Column(length: 255)]
+    #[Assert\NotBlank(message: "L'email est obligatoire.")]
+    #[Assert\Email(message: "L'email n'est pas valide.")]
     private ?string $email = null;
 
     #[ORM\Column(length: 255)]
+    #[Assert\NotBlank(message: "Le mot de passe est obligatoire.")]
+    #[Assert\Length(
+        min: 8,
+        minMessage: "Le mot de passe doit contenir au moins {{ limit }} caractères."
+    )]
     private ?string $passwordHash = null;
 
     #[ORM\Column(type: 'datetime_immutable')]
@@ -39,6 +51,11 @@ class Client implements AuthenticableEntity
 
     #[ORM\Column(type: 'datetime')]
     private ?\DateTime $updatedAt = null;
+
+    public function __construct()
+    {
+        $this->users = new ArrayCollection();
+    }
 
     // --- Lifecycle Callbacks ---
 
@@ -67,7 +84,6 @@ class Client implements AuthenticableEntity
         return $this->id;
     }
 
-    
     public function getUsers(): Collection
     {
         return $this->users;
